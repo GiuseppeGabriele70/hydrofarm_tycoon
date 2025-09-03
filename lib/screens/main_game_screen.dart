@@ -61,13 +61,6 @@ class _MainGameScreenState extends State<MainGameScreen> {
       );
     }
 
-    // 🔹 Dati finti per la lista serre (per ora placeholder)
-    final serre = [
-      {"nome": "Serra 1", "progress": 0.3},
-      {"nome": "Serra 2", "progress": 0.7},
-      {"nome": "Serra 3", "progress": 1.0},
-    ];
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -85,39 +78,19 @@ class _MainGameScreenState extends State<MainGameScreen> {
         ],
       ),
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔹 Colonna sinistra: elenco serre
+          // 📌 Colonna 1: Lista serre
           Expanded(
             flex: 2,
             child: Container(
               color: Colors.green[50],
-              child: ListView.builder(
-                itemCount: serre.length,
-                itemBuilder: (context, index) {
-                  final serra = serre[index];
-                  return Card(
-                    margin: const EdgeInsets.all(8),
-                    child: ListTile(
-                      title: Text(serra["nome"] as String),
-                      subtitle: LinearProgressIndicator(
-                        value: serra["progress"] as double,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // 🔹 Colonna destra: contenuto principale (il tuo layout esistente)
-          Expanded(
-            flex: 8,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Utente: ${currentUser.email}', style: const TextStyle(fontSize: 16)),
+                  Text('Utente: ${currentUser.email}',
+                      style: const TextStyle(fontSize: 16)),
                   Consumer<UserProvider>(
                     builder: (context, up, child) {
                       return Text(
@@ -126,20 +99,31 @@ class _MainGameScreenState extends State<MainGameScreen> {
                       );
                     },
                   ),
-                  Text('Serre disponibili: ${currentUser.serre}', style: const TextStyle(fontSize: 16)),
+                  Text('Serre disponibili: ${currentUser.serre}',
+                      style: const TextStyle(fontSize: 16)),
                   const SizedBox(height: 20),
-
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pushNamed(context, '/serre');
                     },
                     child: const Text("Gestisci Serre"),
                   ),
+                ],
+              ),
+            ),
+          ),
 
-                  const SizedBox(height: 20),
+          // 📌 Colonna 2: Area principale
+          Expanded(
+            flex: 4,
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   _buildGreenhouseArea(context, userProvider),
                   const SizedBox(height: 20),
-
                   const Text(
                     'Piante disponibili per la coltivazione:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -148,9 +132,11 @@ class _MainGameScreenState extends State<MainGameScreen> {
                     child: StreamBuilder<List<Plant>>(
                       stream: databaseService.plants,
                       builder: (context, plantSnapshot) {
-                        if (plantSnapshot.connectionState == ConnectionState.waiting &&
+                        if (plantSnapshot.connectionState ==
+                            ConnectionState.waiting &&
                             !plantSnapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(
+                              child: CircularProgressIndicator());
                         }
                         if (plantSnapshot.hasError) {
                           return Center(
@@ -159,28 +145,36 @@ class _MainGameScreenState extends State<MainGameScreen> {
                             ),
                           );
                         }
-                        final availablePlantBlueprints = plantSnapshot.data ?? [];
+                        final availablePlantBlueprints =
+                            plantSnapshot.data ?? [];
                         if (availablePlantBlueprints.isEmpty) {
                           return const Center(
-                            child: Text('Nessuna pianta disponibile nel negozio.'),
+                            child: Text(
+                                'Nessuna pianta disponibile nel negozio.'),
                           );
                         }
 
                         return ListView.builder(
                           itemCount: availablePlantBlueprints.length,
                           itemBuilder: (context, index) {
-                            final plantBlueprint = availablePlantBlueprints[index];
+                            final plantBlueprint =
+                            availablePlantBlueprints[index];
                             final bool canUserPlantThisSeed =
-                                userProvider.canUserAffordPlant(plantBlueprint) &&
-                                    userProvider.doesUserMeetLevelForPlant(plantBlueprint) &&
-                                    userProvider.canPlantNewSeedInAnySerre();
+                                userProvider.canUserAffordPlant(
+                                    plantBlueprint) &&
+                                    userProvider.doesUserMeetLevelForPlant(
+                                        plantBlueprint) &&
+                                    userProvider
+                                        .canPlantNewSeedInAnySerre();
 
                             return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 4.0),
+                              margin:
+                              const EdgeInsets.symmetric(vertical: 4.0),
                               child: ListTile(
                                 title: Text(
                                   plantBlueprint.name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
                                 ),
                                 subtitle: Text(
                                   'Crescita: ${plantBlueprint.growTime}s - '
@@ -191,12 +185,14 @@ class _MainGameScreenState extends State<MainGameScreen> {
                                 isThreeLine: true,
                                 trailing: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                    canUserPlantThisSeed ? Colors.green : Colors.grey,
+                                    backgroundColor: canUserPlantThisSeed
+                                        ? Colors.green
+                                        : Colors.grey,
                                   ),
                                   onPressed: canUserPlantThisSeed
                                       ? () {
-                                    userProvider.plantSeed(plantBlueprint);
+                                    userProvider
+                                        .plantSeed(plantBlueprint);
                                   }
                                       : null,
                                   child: const Text('Pianta'),
@@ -209,6 +205,19 @@ class _MainGameScreenState extends State<MainGameScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          // 📌 Colonna 3: Pannello extra
+          Expanded(
+            flex: 2,
+            child: Container(
+              color: Colors.blueGrey[50],
+              padding: const EdgeInsets.all(12),
+              child: const Text(
+                "📊 Pannello extra (statistiche, log, risorse...)",
+                style: TextStyle(fontSize: 16),
               ),
             ),
           ),
@@ -237,7 +246,9 @@ class _MainGameScreenState extends State<MainGameScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(statusText, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(statusText,
+              style:
+              const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
