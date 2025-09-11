@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 import '../widgets/warehouse_bar.dart';
 import '../widgets/greenhouse_list.dart';
-import '../widgets/world_map_widget.dart'; // ⬅️ importa la mappa
-import 'package:latlong2/latlong.dart';
+import '../widgets/world_map_widget.dart';
 
 class MainGameScreen extends StatefulWidget {
   const MainGameScreen({super.key});
@@ -39,11 +40,59 @@ class _MainGameScreenState extends State<MainGameScreen> {
     },
   ];
 
+  // Metodo per il logout - USIAMO signOut() invece di logout()
+  Future<void> _logout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Sei sicuro di voler uscire?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Esci'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final authService = AuthService(FirebaseAuth.instance);
+        // USIAMO signOut() invece di logout() - è il metodo esistente
+        await authService.signOut();
+
+        // Navigate to login screen
+        Navigator.pushReplacementNamed(context, '/login');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logout effettuato con successo')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Errore durante il logout: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("HydroFarm Tycoon"),
+        actions: [
+          // TASTO LOGOUT
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _logout(context),
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -138,7 +187,7 @@ class _MainGameScreenState extends State<MainGameScreen> {
             alignment: Alignment.centerRight,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
-              width: isSidebarOpen ? 200 : 80, // minimo indispensabile
+              width: isSidebarOpen ? 200 : 80,
               color: Colors.grey.shade200.withOpacity(isSidebarOpen ? 1 : 0.3),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

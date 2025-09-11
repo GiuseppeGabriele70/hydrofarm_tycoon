@@ -7,25 +7,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1040700578657:android:5f4d764a1355a3cd3e0320",
-        "android_client_info": {
-          "package_name": "com.example.hydrofarm_tycoon"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBhVFPFb99b1rilUEYXDmj_c1xbxpwU68U"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:1040700578657:android:0f21db48c78915d33e0320",
         "android_client_info": {
           "package_name": "com.tuodominio.hydrofarm_tycoon"

@@ -1,16 +1,16 @@
+// File: lib/main.dart (CORRETTO)
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as FirebaseAuthLib;
+import 'package:flutter/foundation.dart';
 
 // Import corretto per il tuo progetto
 import 'providers/user_provider.dart';
 import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
 import 'screens/main_game_screen.dart';
-import 'screens/lista_serre_screen.dart'; // <-- IMPORT
 import 'firebase_options.dart';
 
 void main() async {
@@ -19,16 +19,18 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  print('----------------------------------------------------------------------');
-  print('>>> FIREBASE DEBUG: Initialized Firebase App Name: ${app.name}');
-  print('>>> FIREBASE DEBUG: Project ID: ${app.options.projectId}');
-  print('----------------------------------------------------------------------');
+  if (kDebugMode) {
+    print('----------------------------------------------------------------------');
+    print('>>> FIREBASE DEBUG: Initialized Firebase App Name: ${app.name}');
+    print('>>> FIREBASE DEBUG: Project ID: ${app.options.projectId}');
+    print('----------------------------------------------------------------------');
+  }
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        Provider<AuthService>(create: (_) => AuthService(FirebaseAuth.instance)),
+        Provider<AuthService>(create: (_) => AuthService(FirebaseAuthLib.FirebaseAuth.instance)),
         ProxyProvider<UserProvider, DatabaseService?>(
           update: (context, userProvider, previousDbService) {
             final uid = userProvider.user?.uid;
@@ -53,60 +55,59 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'HydroFarm Tycoon',
       theme: ThemeData(primarySwatch: Colors.green),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const AuthWrapper(),
-        '/login': (context) => LoginScreen(),
-        '/register': (context) => RegisterScreen(),
-        '/main': (context) => const MainGameScreen(),
-        '/serre': (context) => const ListaSerreScreen(), // <-- TEST VERSIONE SEMPLICE
-      },
+      home: const AuthWrapper(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
+// CORRETTO: AuthWrapper con gestione semplificata
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
-
-    return StreamBuilder<User?>(
-      stream: authService.authStateChanges,
+    return StreamBuilder<FirebaseAuthLib.User?>(
+      stream: FirebaseAuthLib.FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+        if (kDebugMode) {
+          print(">>> AuthWrapper Stream Emission: connectionState=${snapshot.connectionState}, hasData=${snapshot.hasData}, userUID=${snapshot.data?.uid}");
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
+          if (kDebugMode) print(">>> AuthWrapper: Stream in attesa...");
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (snapshot.hasError) {
-          return const Scaffold(
-            body: Center(child: Text("Errore di autenticazione.")),
-          );
-        }
-
         final firebaseUser = snapshot.data;
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
 
         if (firebaseUser != null) {
+          if (kDebugMode) print(">>> AuthWrapper: Firebase user presente (${firebaseUser.uid}).");
+
+          // Sincronizza con UserProvider
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            final userProvider = context.read<UserProvider>();
             if (userProvider.user == null || userProvider.user!.uid != firebaseUser.uid) {
-              userProvider.initializeUserBaseData(
-                  firebaseUser.uid, firebaseUser.email ?? 'email.mancante@example.com');
-              userProvider.loadAndSetPersistentUserData(firebaseUser.uid);
+              if (kDebugMode) print(">>> AuthWrapper: Sincronizzazione UserProvider");
+              userProvider.setUserFromAuth(firebaseUser); // Passa l'oggetto User, non la stringa
             }
           });
+
           return const MainGameScreen();
         } else {
+          if (kDebugMode) print(">>> AuthWrapper: Firebase user assente.");
+
+          // Pulisci UserProvider
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            final userProvider = context.read<UserProvider>();
             if (userProvider.user != null) {
+              if (kDebugMode) print(">>> AuthWrapper: Pulizia UserProvider");
               userProvider.clearUser();
             }
           });
-          return LoginScreen();
+
+          return const LoginScreen();
         }
       },
     );
