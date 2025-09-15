@@ -1,3 +1,4 @@
+// lib/models/agricoltura/centro_agricolo.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CentroAgricolo {
@@ -25,18 +26,19 @@ class CentroAgricolo {
     this.statoManutenzione = 100,
   });
 
-  factory CentroAgricolo.fromFirestore(Map<String, dynamic> data, String id) {
+  // MODIFICATO: Accetta (String id, Map<String, dynamic> data) per coerenza
+  factory CentroAgricolo.fromFirestore(String id, Map<String, dynamic> data) {
     return CentroAgricolo(
-      id: id,
-      nome: data['nome'] ?? 'Centro Agricolo',
-      userId: data['userId'] ?? '',
-      ubicazione: data['ubicazione'] ?? 'Località Predefinita',
-      livello: data['livello'] ?? 1,
-      capacitaSerre: data['capacitaSerre'] ?? 3,
-      serreIdroponicheIds: List<String>.from(data['serreIdroponicheIds'] ?? []),
+      id: id, // Usa l'ID passato
+      nome: data['nome'] as String? ?? 'Centro Agricolo',
+      userId: data['userId'] as String? ?? '',
+      ubicazione: data['ubicazione'] as String? ?? 'Località Predefinita',
+      livello: data['livello'] as int? ?? 1,
+      capacitaSerre: data['capacitaSerre'] as int? ?? 3,
+      serreIdroponicheIds: List<String>.from(data['serreIdroponicheIds'] as List? ?? []),
       dataFondazione: (data['dataFondazione'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      efficienzaTotale: (data['efficienzaTotale'] ?? 0.8).toDouble(),
-      statoManutenzione: data['statoManutenzione'] ?? 100,
+      efficienzaTotale: (data['efficienzaTotale'] as num?)?.toDouble() ?? 0.8,
+      statoManutenzione: data['statoManutenzione'] as int? ?? 100,
     );
   }
 
@@ -55,30 +57,21 @@ class CentroAgricolo {
     };
   }
 
+  // Se hai un fromMap, considera di allinearlo o di avere una logica chiara per quando usare quale.
+  // Per ora, lo lascio implicito che si userà fromFirestore.
+  // factory CentroAgricolo.fromMap(Map<String, dynamic> data, String id) {
+  //   return CentroAgricolo.fromFirestore(id, data); // Esempio se vuoi allinearlo
+  // }
+
   Map<String, dynamic> toMap() {
     return toFirestore();
   }
 
-  // Metodi utility
   bool get isPieno => serreIdroponicheIds.length >= capacitaSerre;
-
   int get serreLibere => capacitaSerre - serreIdroponicheIds.length;
-
   bool puoAggiungereSerra() {
     return serreIdroponicheIds.length < capacitaSerre;
   }
-
-  // RIMOSSO IL METODO PROBLEMATICO - può essere implementato altrove
-  // double calcolaEfficienzaTotale(List<SerraIdroponica> serre) {
-  //   if (serre.isEmpty) return efficienzaTotale;
-
-  //   final efficienzaMedia = serre
-  //       .where((s) => serreIdroponicheIds.contains(s.id))
-  //       .map((s) => s.efficienza)
-  //       .reduce((a, b) => a + b) / serre.length;
-
-  //   return efficienzaMedia * (statoManutenzione / 100);
-  // }
 
   CentroAgricolo copyWith({
     String? id,
@@ -111,3 +104,4 @@ class CentroAgricolo {
     return 'CentroAgricolo($nome, Lv.$livello, Serre: ${serreIdroponicheIds.length}/$capacitaSerre)';
   }
 }
+

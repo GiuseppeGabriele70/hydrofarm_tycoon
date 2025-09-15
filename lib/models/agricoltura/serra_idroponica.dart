@@ -1,3 +1,4 @@
+// lib/models/agricoltura/serra_idroponica.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SerraIdroponica {
@@ -33,42 +34,44 @@ class SerraIdroponica {
     this.consumoAcqua = 1.2,
   });
 
-  factory SerraIdroponica.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // MODIFICATO: Accetta (String id, Map<String, dynamic> data)
+  factory SerraIdroponica.fromFirestore(String id, Map<String, dynamic> data) {
     return SerraIdroponica(
-      id: doc.id,
-      nome: data['nome'] ?? 'Serra Idroponica',
-      tipo: data['tipo'] ?? 'base',
-      livello: data['livello'] ?? 1,
-      capacitaModuli: data['capacitaModuli'] ?? 4,
-      centroAgricoloId: data['centroAgricoloId'] ?? '',
-      userId: data['userId'] ?? '',
-      moduliColtivazioneIds: List<String>.from(data['moduliColtivazioneIds'] ?? []),
-      statoManutenzione: data['statoManutenzione'] ?? 100,
-      isAttiva: data['isAttiva'] ?? true,
+      id: id, // Usa l'ID passato
+      nome: data['nome'] as String? ?? 'Serra Idroponica',
+      tipo: data['tipo'] as String? ?? 'base',
+      livello: data['livello'] as int? ?? 1,
+      capacitaModuli: data['capacitaModuli'] as int? ?? 4,
+      centroAgricoloId: data['centroAgricoloId'] as String? ?? '',
+      userId: data['userId'] as String? ?? '',
+      moduliColtivazioneIds: List<String>.from(data['moduliColtivazioneIds'] as List? ?? []),
+      statoManutenzione: data['statoManutenzione'] as int? ?? 100,
+      isAttiva: data['isAttiva'] as bool? ?? true,
       dataCostruzione: (data['dataCostruzione'] as Timestamp?)?.toDate() ?? DateTime.now(),
       dataUltimaManutenzione: (data['dataUltimaManutenzione'] as Timestamp?)?.toDate(),
-      consumoEnergetico: (data['consumoEnergetico'] ?? 2.5).toDouble(),
-      consumoAcqua: (data['consumoAcqua'] ?? 1.2).toDouble(),
+      consumoEnergetico: (data['consumoEnergetico'] as num?)?.toDouble() ?? 2.5,
+      consumoAcqua: (data['consumoAcqua'] as num?)?.toDouble() ?? 1.2,
     );
   }
 
+  // MANTENUTO: fromMap con (Map data, String id) per compatibilità se usato altrove
+  // Se vuoi standardizzare anche questo a (String id, Map data), puoi farlo.
   factory SerraIdroponica.fromMap(Map<String, dynamic> data, String id) {
     return SerraIdroponica(
       id: id,
-      nome: data['nome'] ?? 'Serra Idroponica',
-      tipo: data['tipo'] ?? 'base',
-      livello: data['livello'] ?? 1,
-      capacitaModuli: data['capacitaModuli'] ?? 4,
-      centroAgricoloId: data['centroAgricoloId'] ?? '',
-      userId: data['userId'] ?? '',
-      moduliColtivazioneIds: List<String>.from(data['moduliColtivazioneIds'] ?? []),
-      statoManutenzione: data['statoManutenzione'] ?? 100,
-      isAttiva: data['isAttiva'] ?? true,
+      nome: data['nome'] as String? ?? 'Serra Idroponica',
+      tipo: data['tipo'] as String? ?? 'base',
+      livello: data['livello'] as int? ?? 1,
+      capacitaModuli: data['capacitaModuli'] as int? ?? 4,
+      centroAgricoloId: data['centroAgricoloId'] as String? ?? '',
+      userId: data['userId'] as String? ?? '',
+      moduliColtivazioneIds: List<String>.from(data['moduliColtivazioneIds'] as List? ?? []),
+      statoManutenzione: data['statoManutenzione'] as int? ?? 100,
+      isAttiva: data['isAttiva'] as bool? ?? true,
       dataCostruzione: (data['dataCostruzione'] as Timestamp?)?.toDate() ?? DateTime.now(),
       dataUltimaManutenzione: (data['dataUltimaManutenzione'] as Timestamp?)?.toDate(),
-      consumoEnergetico: (data['consumoEnergetico'] ?? 2.5).toDouble(),
-      consumoAcqua: (data['consumoAcqua'] ?? 1.2).toDouble(),
+      consumoEnergetico: (data['consumoEnergetico'] as num?)?.toDouble() ?? 2.5,
+      consumoAcqua: (data['consumoAcqua'] as num?)?.toDouble() ?? 1.2,
     );
   }
 
@@ -97,16 +100,12 @@ class SerraIdroponica {
     return toFirestore();
   }
 
-  // Metodi utility
   bool get isPiena => moduliColtivazioneIds.length >= capacitaModuli;
-
   int get moduliLiberi => capacitaModuli - moduliColtivazioneIds.length;
-
   double get efficienza {
     final baseEfficienza = 0.7 + (livello * 0.1);
     return baseEfficienza * (statoManutenzione / 100);
   }
-
   bool puoAggiungereModulo() {
     return moduliColtivazioneIds.length < capacitaModuli && isAttiva;
   }
@@ -150,3 +149,4 @@ class SerraIdroponica {
     return 'SerraIdroponica($nome, Lv.$livello, Moduli: ${moduliColtivazioneIds.length}/$capacitaModuli)';
   }
 }
+

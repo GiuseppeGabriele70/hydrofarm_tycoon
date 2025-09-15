@@ -1,3 +1,4 @@
+// lib/services/agricoltura_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/agricoltura/modulo_coltivazione.dart';
 import '../models/agricoltura/serra_idroponica.dart';
@@ -10,13 +11,13 @@ class AgricolturaService {
   Future<int> contaModuliPerSerra(String serraId) async {
     try {
       final snapshot = await _firestore
-          .collection('moduli_coltivazione')
+          .collectionGroup('moduli_coltivazione')
           .where('serraIdroponicaId', isEqualTo: serraId)
           .count()
           .get();
-      return snapshot.count ?? 0; // FORZA il ritorno di int (non int?)
+      return snapshot.count ?? 0;
     } catch (e) {
-      print('Errore conteggio moduli per serra: $e');
+      print('Errore conteggio moduli per serra $serraId: $e');
       return 0;
     }
   }
@@ -24,27 +25,26 @@ class AgricolturaService {
   Future<int> contaSerrePerCentro(String centroId) async {
     try {
       final snapshot = await _firestore
-          .collection('serre_idroponiche')
+          .collectionGroup('serre_idroponiche')
           .where('centroAgricoloId', isEqualTo: centroId)
           .count()
           .get();
-      return snapshot.count ?? 0; // FORZA il ritorno di int (non int?)
+      return snapshot.count ?? 0;
     } catch (e) {
-      print('Errore conteggio serre per centro: $e');
+      print('Errore conteggio serre per centro $centroId: $e');
       return 0;
     }
   }
 
-  // === METODI ALTERNATIVI (se i count() danno problemi) ===
   Future<int> contaModuliPerSerraAlternativo(String serraId) async {
     try {
       final querySnapshot = await _firestore
-          .collection('moduli_coltivazione')
+          .collectionGroup('moduli_coltivazione')
           .where('serraIdroponicaId', isEqualTo: serraId)
           .get();
-      return querySnapshot.docs.length; // Questo restituisce sempre int
+      return querySnapshot.docs.length;
     } catch (e) {
-      print('Errore conteggio moduli per serra: $e');
+      print('Errore conteggio moduli per serra (alt) $serraId: $e');
       return 0;
     }
   }
@@ -52,45 +52,51 @@ class AgricolturaService {
   Future<int> contaSerrePerCentroAlternativo(String centroId) async {
     try {
       final querySnapshot = await _firestore
-          .collection('serre_idroponiche')
+          .collectionGroup('serre_idroponiche')
           .where('centroAgricoloId', isEqualTo: centroId)
           .get();
-      return querySnapshot.docs.length; // Questo restituisce sempre int
+      return querySnapshot.docs.length;
     } catch (e) {
-      print('Errore conteggio serre per centro: $e');
+      print('Errore conteggio serre per centro (alt) $centroId: $e');
       return 0;
     }
   }
 
   // === METODI per MODULI di COLTIVAZIONE ===
-  Future<void> aggiungiModuloColtivazione(ModuloColtivazione modulo) async {
+  Future<void> aggiungiModuloColtivazione(ModuloColtivazione modulo, {String? pathPrefix}) async {
     try {
-      await _firestore
-          .collection('moduli_coltivazione')
-          .doc(modulo.id)
-          .set(modulo.toFirestore());
+      CollectionReference moduliRef = _firestore.collection(
+          pathPrefix != null ? '$pathPrefix/moduli_coltivazione' : 'moduli_coltivazione');
+      await moduliRef.doc(modulo.id).set(modulo.toFirestore());
     } catch (e) {
       print('Errore aggiunta modulo coltivazione: $e');
       rethrow;
     }
   }
 
-  Stream<List<ModuloColtivazione>> getModuliColtivazione(String userId) {
+  Stream<List<ModuloColtivazione>> getModuliColtivazioneUtente(String userId) {
     return _firestore
-        .collection('moduli_coltivazione')
+        .collection('moduli_coltivazione') // Assumendo collezione root o un percorso gestito da field 'userId'
         .where('userId', isEqualTo: userId)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => ModuloColtivazione.fromFirestore(doc.data(), doc.id))
-        .toList());
+        .map((snapshot) {
+      try {
+        return snapshot.docs.map((doc) {
+          // CORRETTO: Passa id e data al factory
+          return ModuloColtivazione.fromFirestore(doc.id, doc.data());
+        }).toList();
+      } catch (e) {
+        print("Errore deserializzazione ModuliColtivazione: $e");
+        return <ModuloColtivazione>[];
+      }
+    });
   }
 
-  Future<void> aggiornaModuloColtivazione(ModuloColtivazione modulo) async {
+  Future<void> aggiornaModuloColtivazione(ModuloColtivazione modulo, {String? pathPrefix}) async {
     try {
-      await _firestore
-          .collection('moduli_coltivazione')
-          .doc(modulo.id)
-          .update(modulo.toFirestore());
+      CollectionReference moduliRef = _firestore.collection(
+          pathPrefix != null ? '$pathPrefix/moduli_coltivazione' : 'moduli_coltivazione');
+      await moduliRef.doc(modulo.id).update(modulo.toFirestore());
     } catch (e) {
       print('Errore aggiornamento modulo coltivazione: $e');
       rethrow;
@@ -98,34 +104,41 @@ class AgricolturaService {
   }
 
   // === METODI per SERRE IDROPONICHE ===
-  Future<void> aggiungiSerraIdroponica(SerraIdroponica serra) async {
+  Future<void> aggiungiSerraIdroponica(SerraIdroponica serra, {String? pathPrefix}) async {
     try {
-      await _firestore
-          .collection('serre_idroponiche')
-          .doc(serra.id)
-          .set(serra.toFirestore());
+      CollectionReference serreRef = _firestore.collection(
+          pathPrefix != null ? '$pathPrefix/serre_idroponiche' : 'serre_idroponiche');
+      await serreRef.doc(serra.id).set(serra.toFirestore());
     } catch (e) {
       print('Errore aggiunta serra idroponica: $e');
       rethrow;
     }
   }
 
-  Stream<List<SerraIdroponica>> getSerreIdroponiche(String userId) {
+  Stream<List<SerraIdroponica>> getSerreIdroponicheUtente(String userId) {
     return _firestore
-        .collection('serre_idroponiche')
+        .collection('serre_idroponiche') // Assumendo collezione root o un percorso gestito da field 'userId'
         .where('userId', isEqualTo: userId)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => SerraIdroponica.fromFirestore(doc))
-        .toList());
+        .map((snapshot) {
+      try {
+        return snapshot.docs.map((doc) {
+          // CORRETTO: Passa id e data al factory
+          // Assicurati che SerraIdroponica.fromFirestore sia (String id, Map<String, dynamic> data)
+          return SerraIdroponica.fromFirestore(doc.id, doc.data());
+        }).toList();
+      } catch (e) {
+        print("Errore deserializzazione SerreIdroponiche: $e");
+        return <SerraIdroponica>[];
+      }
+    });
   }
 
-  Future<void> aggiornaSerraIdroponica(SerraIdroponica serra) async {
+  Future<void> aggiornaSerraIdroponica(SerraIdroponica serra, {String? pathPrefix}) async {
     try {
-      await _firestore
-          .collection('serre_idroponiche')
-          .doc(serra.id)
-          .update(serra.toFirestore());
+      CollectionReference serreRef = _firestore.collection(
+          pathPrefix != null ? '$pathPrefix/serre_idroponiche' : 'serre_idroponiche');
+      await serreRef.doc(serra.id).update(serra.toFirestore());
     } catch (e) {
       print('Errore aggiornamento serra idroponica: $e');
       rethrow;
@@ -133,152 +146,190 @@ class AgricolturaService {
   }
 
   // === METODI per CENTRI AGRICOLI ===
-  Future<void> aggiungiCentroAgricolo(CentroAgricolo centro) async {
+  Future<void> aggiungiCentroAgricolo(CentroAgricolo centro, {String? pathPrefix}) async {
     try {
-      await _firestore
-          .collection('centri_agricoli')
-          .doc(centro.id)
-          .set(centro.toFirestore());
+      CollectionReference centriRef = _firestore.collection(
+          pathPrefix != null ? '$pathPrefix/centri_agricoli' : 'centri_agricoli');
+      await centriRef.doc(centro.id).set(centro.toFirestore());
     } catch (e) {
       print('Errore aggiunta centro agricolo: $e');
       rethrow;
     }
   }
 
-  Stream<List<CentroAgricolo>> getCentriAgricoli(String userId) {
+  Stream<List<CentroAgricolo>> getCentriAgricoliUtente(String userId) {
     return _firestore
-        .collection('centri_agricoli')
+        .collection('centri_agricoli') // Assumendo collezione root o un percorso gestito da field 'userId'
         .where('userId', isEqualTo: userId)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => CentroAgricolo.fromFirestore(doc.data(), doc.id))
-        .toList());
+        .map((snapshot) {
+      try {
+        return snapshot.docs.map((doc) {
+          // CORRETTO: Passa id e data al factory
+          // Assicurati che CentroAgricolo.fromFirestore sia (String id, Map<String, dynamic> data)
+          return CentroAgricolo.fromFirestore(doc.id, doc.data());
+        }).toList();
+      } catch (e) {
+        print("Errore deserializzazione CentriAgricoli: $e");
+        return <CentroAgricolo>[];
+      }
+    });
   }
 
-  Future<void> aggiornaCentroAgricolo(CentroAgricolo centro) async {
+  Future<void> aggiornaCentroAgricolo(CentroAgricolo centro, {String? pathPrefix}) async {
     try {
-      await _firestore
-          .collection('centri_agricoli')
-          .doc(centro.id)
-          .update(centro.toFirestore());
+      CollectionReference centriRef = _firestore.collection(
+          pathPrefix != null ? '$pathPrefix/centri_agricoli' : 'centri_agricoli');
+      await centriRef.doc(centro.id).update(centro.toFirestore());
     } catch (e) {
       print('Errore aggiornamento centro agricolo: $e');
       rethrow;
     }
   }
 
-  // === METODI di COMPATIBILITÀ (vecchi nomi) ===
-  Future<void> aggiungiSerra(ModuloColtivazione modulo) async {
+  // COMPATIBILITÀ
+  Future<void> aggiungiSerraCompat(ModuloColtivazione modulo) async {
     return aggiungiModuloColtivazione(modulo);
   }
 
-  Stream<List<ModuloColtivazione>> getSerre(String userId) {
-    return getModuliColtivazione(userId);
+  Stream<List<ModuloColtivazione>> getSerreCompat(String userId) {
+    return getModuliColtivazioneUtente(userId);
   }
 
-  Future<void> aggiornaSerra(ModuloColtivazione modulo) async {
+  Future<void> aggiornaSerraCompat(ModuloColtivazione modulo) async {
     return aggiornaModuloColtivazione(modulo);
   }
 
-  Future<bool> verificaCapacitaSerra(String serraId) async {
+  Future<bool> verificaCapacitaSerra(String serraId, {String? pathPrefixSerra}) async {
     try {
-      final serraDoc = await _firestore
-          .collection('serre_idroponiche')
-          .doc(serraId)
-          .get();
+      DocumentReference serraDocRef = pathPrefixSerra != null
+          ? _firestore.collection('$pathPrefixSerra/serre_idroponiche').doc(serraId)
+          : _firestore.collection('serre_idroponiche').doc(serraId); // Assumendo collezione root se no prefix
 
-      if (!serraDoc.exists) return false;
+      final serraDoc = await serraDocRef.get();
 
-      final serra = SerraIdroponica.fromFirestore(serraDoc);
+      if (!serraDoc.exists) {
+        print("Verifica capacità: Serra $serraId non trovata.");
+        return false;
+      }
+      final serraData = serraDoc.data() as Map<String, dynamic>?;
+      if (serraData == null) {
+        print("Verifica capacità: Dati nulli per serra $serraId.");
+        return false;
+      }
+      // CORRETTO: Passa id e data al factory
+      // Assicurati che SerraIdroponica.fromFirestore sia (String id, Map<String, dynamic> data)
+      final serra = SerraIdroponica.fromFirestore(serraDoc.id, serraData);
       final conteggioModuli = await contaModuliPerSerra(serraId);
 
       return conteggioModuli < serra.capacitaModuli;
     } catch (e) {
-      print('Errore verifica capacità serra: $e');
+      print('Errore verifica capacità serra $serraId: $e');
       return false;
     }
   }
 
-  Future<bool> verificaCapacitaCentro(String centroId) async {
+  Future<bool> verificaCapacitaCentro(String centroId, {String? pathPrefixCentro}) async {
     try {
-      final centroDoc = await _firestore
-          .collection('centri_agricoli')
-          .doc(centroId)
-          .get();
+      DocumentReference centroDocRef = pathPrefixCentro != null
+          ? _firestore.collection('$pathPrefixCentro/centri_agricoli').doc(centroId)
+          : _firestore.collection('centri_agricoli').doc(centroId); // Assumendo collezione root se no prefix
 
-      if (!centroDoc.exists) return false;
+      final centroDoc = await centroDocRef.get();
 
-      final centroData = centroDoc.data();
-      if (centroData == null) return false;
-
-      final centro = CentroAgricolo.fromFirestore(centroData, centroId);
+      if (!centroDoc.exists) {
+        print("Verifica capacità: Centro $centroId non trovato.");
+        return false;
+      }
+      final centroData = centroDoc.data() as Map<String, dynamic>?;
+      if (centroData == null) {
+        print("Verifica capacità: Dati nulli per centro $centroId.");
+        return false;
+      }
+      // CORRETTO: Passa id e data al factory
+      // Assicurati che CentroAgricolo.fromFirestore sia (String id, Map<String, dynamic> data)
+      final centro = CentroAgricolo.fromFirestore(centroDoc.id, centroData);
       final conteggioSerre = await contaSerrePerCentro(centroId);
 
       return conteggioSerre < centro.capacitaSerre;
     } catch (e) {
-      print('Errore verifica capacità centro: $e');
+      print('Errore verifica capacità centro $centroId: $e');
       return false;
     }
   }
 
-  // Metodo per ottenere tutti i moduli di una specifica serra
-  Stream<List<ModuloColtivazione>> getModuliPerSerra(String serraId) {
-    return _firestore
-        .collection('moduli_coltivazione')
-        .where('serraIdroponicaId', isEqualTo: serraId)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => ModuloColtivazione.fromFirestore(doc.data(), doc.id))
-        .toList());
+  Stream<List<ModuloColtivazione>> getModuliPerSerra(String serraId, {String? collectionPath}) {
+    // Se 'moduli_coltivazione' è una sottocollezione, potresti aver bisogno di costruire il path completo
+    // o affidarti a collectionGroup se vuoi cercare in tutti i percorsi.
+    Query query = _firestore.collectionGroup('moduli_coltivazione');
+    query = query.where('serraIdroponicaId', isEqualTo: serraId);
+
+    return query.snapshots().map((snapshot) {
+      try {
+        return snapshot.docs.map((doc) {
+          // CORRETTO: Passa id e data al factory
+          return ModuloColtivazione.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
+        }).toList();
+      } catch (e) {
+        print("Errore deserializzazione Moduli per serra $serraId: $e");
+        return <ModuloColtivazione>[];
+      }
+    });
   }
 
-  // Metodo per ottenere tutte le serre di un specifico centro
-  Stream<List<SerraIdroponica>> getSerrePerCentro(String centroId) {
-    return _firestore
-        .collection('serre_idroponiche')
-        .where('centroAgricoloId', isEqualTo: centroId)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => SerraIdroponica.fromFirestore(doc))
-        .toList());
+  Stream<List<SerraIdroponica>> getSerrePerCentro(String centroId, {String? collectionPath}) {
+    // Simile a getModuliPerSerra, considera la struttura del DB per collectionGroup vs path diretti
+    Query query = _firestore.collectionGroup('serre_idroponiche');
+    query = query.where('centroAgricoloId', isEqualTo: centroId);
+
+    return query.snapshots().map((snapshot) {
+      try {
+        return snapshot.docs.map((doc) {
+          // CORRETTO: Passa id e data al factory
+          // Assicurati che SerraIdroponica.fromFirestore sia (String id, Map<String, dynamic> data)
+          return SerraIdroponica.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
+        }).toList();
+      } catch (e) {
+        print("Errore deserializzazione Serre per centro $centroId: $e");
+        return <SerraIdroponica>[];
+      }
+    });
   }
 
-  // Metodo per eliminare un modulo di coltivazione
-  Future<void> eliminaModuloColtivazione(String moduloId) async {
+  Future<void> eliminaModuloColtivazione(String moduloId, {String? path}) async {
     try {
-      await _firestore
-          .collection('moduli_coltivazione')
-          .doc(moduloId)
-          .delete();
+      DocumentReference docRef = path != null
+          ? _firestore.doc('$path/$moduloId') // Es: path = 'users/uid/centri/cid/serre/sid/moduli_coltivazione'
+          : _firestore.collection('moduli_coltivazione').doc(moduloId);
+      await docRef.delete();
     } catch (e) {
-      print('Errore eliminazione modulo coltivazione: $e');
+      print('Errore eliminazione modulo coltivazione $moduloId: $e');
       rethrow;
     }
   }
 
-  // Metodo per eliminare una serra idroponica
-  Future<void> eliminaSerraIdroponica(String serraId) async {
+  Future<void> eliminaSerraIdroponica(String serraId, {String? path}) async {
     try {
-      await _firestore
-          .collection('serre_idroponiche')
-          .doc(serraId)
-          .delete();
+      DocumentReference docRef = path != null
+          ? _firestore.doc('$path/$serraId') // Es: path = 'users/uid/centri/cid/serre_idroponiche'
+          : _firestore.collection('serre_idroponiche').doc(serraId);
+      await docRef.delete();
     } catch (e) {
-      print('Errore eliminazione serra idroponica: $e');
+      print('Errore eliminazione serra idroponica $serraId: $e');
       rethrow;
     }
   }
 
-  // Metodo per eliminare un centro agricolo
-  Future<void> eliminaCentroAgricolo(String centroId) async {
+  Future<void> eliminaCentroAgricolo(String centroId, {String? path}) async {
     try {
-      await _firestore
-          .collection('centri_agricoli')
-          .doc(centroId)
-          .delete();
+      DocumentReference docRef = path != null
+          ? _firestore.doc('$path/$centroId') // Es: path = 'users/uid/centri_agricoli'
+          : _firestore.collection('centri_agricoli').doc(centroId);
+      await docRef.delete();
     } catch (e) {
-      print('Errore eliminazione centro agricolo: $e');
+      print('Errore eliminazione centro agricolo $centroId: $e');
       rethrow;
     }
   }
 }
+
